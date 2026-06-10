@@ -479,10 +479,10 @@
         fd.append('publish', isPublished);
         await apiCall(fd);
         showToast('Estoque atualizado!', 'success');
-        refreshData();
+        setTimeout(refreshData, 2000);
       } catch (err) { 
         showToast(err.message, 'error'); 
-        refreshData(); // revert toggle visually on failure
+        setTimeout(refreshData, 2000);
       }
     }
   </script>
