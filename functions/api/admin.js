@@ -120,9 +120,8 @@ export async function onRequestPost(context) {
       const beerModel = modelsData.data.find(m => m.attributes.api_key === 'cerveja');
       if (!beerModel) throw new Error('Modelo "cerveja" não encontrado no DatoCMS.');
 
-      // 3. Determine Price format (DatoCMS expects float/number)
-      let parsedPrice = parseFloat(data.preco.replace(',', '.'));
-      if (isNaN(parsedPrice)) parsedPrice = 0;
+      // 3. Price format (DatoCMS schema expects a string for price)
+      let parsedPrice = data.preco.toString();
 
       // 4. Create the Item
       const createItemRes = await fetch('https://site-api.datocms.com/items', {
@@ -248,5 +247,26 @@ async function uploadToDatoCMS(file, token, tags, altText) {
   if (!createUploadRes.ok) throw new Error('Falha ao finalizar o upload no DatoCMS.');
   const uploadFinalData = await createUploadRes.json();
   
-  return uploadFinalData.data.id; // Return the new Upload ID
+  let finalId = uploadFinalData.data.id;
+  
+  if (uploadFinalData.data.type === 'job') {
+    let isDone = false;
+    let attempts = 0;
+    while (!isDone && attempts < 15) {
+      await new Promise(r => setTimeout(r, 1000));
+      const jobRes = await fetch(`https://site-api.datocms.com/job-results/${finalId}`, {
+        headers: headersCMA
+      });
+      if (jobRes.status === 200) {
+        const jobData = await jobRes.json();
+        finalId = jobData.data.id;
+        isDone = true;
+      } else if (jobRes.status !== 202) {
+        throw new Error('Falha no processamento da imagem pelo DatoCMS.');
+      }
+      attempts++;
+    }
+  }
+
+  return finalId;
 }
