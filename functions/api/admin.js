@@ -266,9 +266,6 @@ async function uploadToDatoCMS(file, token, readToken, tags, altText) {
   let finalId = uploadFinalData.data.id;
   
   if (uploadFinalData.data && uploadFinalData.data.type === 'job') {
-    let isDone = false;
-    let attempts = 0;
-    
     // O DatoCMS processa a imagem em um Job assíncrono.
     // Para evitar os falsos 404 do endpoint de job-results e o cache lento do GraphQL,
     // vamos buscar diretamente na API de Gerenciamento (CMA), que não tem cache!
