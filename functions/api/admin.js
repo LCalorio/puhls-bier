@@ -93,7 +93,7 @@ export async function onRequestPost(context) {
     if (action === 'upload_gallery') {
       if (!file) throw new Error('Arquivo de imagem ausente.');
       
-      const uploadId = await uploadToDatoCMS(file, token, ['galeria'], data.alt);
+      const uploadId = await uploadToDatoCMS(file, token, readToken, ['galeria'], data.alt);
       return new Response(JSON.stringify({ success: true, message: 'Adicionado à galeria!', id: uploadId }), { status: 200 });
     }
 
@@ -116,7 +116,7 @@ export async function onRequestPost(context) {
       if (!file) throw new Error('O rótulo (imagem) é obrigatório.');
 
       // 1. Upload image to DatoCMS Media Area
-      const imageId = await uploadToDatoCMS(file, token, ['rotulo'], `Rótulo ${data.nome}`);
+      const imageId = await uploadToDatoCMS(file, token, readToken, ['rotulo'], `Rótulo ${data.nome}`);
 
       // 2. Get the 'cerveja' Model ID
       const modelsRes = await fetch('https://site-api.datocms.com/item-types', { headers: headersCMA });
@@ -208,7 +208,7 @@ export async function onRequestPost(context) {
 // ------------------------------------------------------------------
 // HELPER: Upload File to DatoCMS (3-step process)
 // ------------------------------------------------------------------
-async function uploadToDatoCMS(file, token, tags, altText) {
+async function uploadToDatoCMS(file, token, readToken, tags, altText) {
   const headersCMA = {
     'Authorization': `Bearer ${token}`,
     'Accept': 'application/json',
@@ -281,7 +281,8 @@ async function uploadToDatoCMS(file, token, tags, altText) {
     const gqlRes = await fetch('https://graphql.datocms.com/', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${readToken}`,
+        'Content-Type': 'application/json',
         'X-Include-Drafts': 'true' // Ignora o cache
       },
       body: JSON.stringify({ query })
