@@ -237,8 +237,7 @@ async function uploadToDatoCMS(file, token, tags, altText) {
           path: s3Path,
           tags: tags,
           default_field_metadata: {
-            pt: { alt: altText || '', title: null, custom_data: {} },
-            en: { alt: altText || '', title: null, custom_data: {} }
+            pt: { alt: altText || '', title: null, custom_data: {} }
           }
         }
       }
@@ -262,7 +261,8 @@ async function uploadToDatoCMS(file, token, tags, altText) {
         finalId = jobData.data.id;
         isDone = true;
       } else if (jobRes.status !== 202) {
-        throw new Error('Falha no processamento da imagem pelo DatoCMS.');
+        const errText = await jobRes.text();
+        throw new Error(`Falha no processamento da imagem: ${errText}`);
       }
       attempts++;
     }
