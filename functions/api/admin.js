@@ -164,7 +164,7 @@ export async function onRequestPost(context) {
     // ACTION: TOGGLE_BEER (Publish / Unpublish)
     // ----------------------------------------------------
     if (action === 'toggle_beer') {
-      const endpoint = data.publish === true ? 'publish' : 'unpublish';
+      const endpoint = (data.publish === 'true' || data.publish === true) ? 'publish' : 'unpublish';
       const res = await fetch(`https://site-api.datocms.com/items/${data.id}/${endpoint}`, {
         method: 'PUT',
         headers: headersCMA
@@ -239,10 +239,7 @@ async function uploadToDatoCMS(file, token, tags, altText) {
         type: 'upload',
         attributes: {
           path: s3Path,
-          tags: tags,
-          default_field_metadata: {
-            pt: { alt: altText || '', title: null, custom_data: {} }
-          }
+          tags: tags
         }
       }
     })

@@ -364,7 +364,7 @@
             <div class="gallery-item">
               <img src="${img.url}?w=300&h=300&fit=crop" alt="${img.alt}">
               <div class="delete-overlay">
-                <button class="btn btn-danger" style="width:auto; padding: 8px;" onclick="deleteGallery('${img.id}')">Excluir</button>
+                <button class="btn btn-danger" style="width:auto; padding: 8px;" onclick="deleteGallery('${img.id}', this)">Excluir</button>
               </div>
             </div>
           `;
@@ -397,7 +397,7 @@
                   <input type="checkbox" ${isPublished ? 'checked' : ''} onchange="toggleBeer('${beer.id}', this.checked)">
                   <span class="slider"></span>
                 </label>
-                <button class="btn btn-danger" style="width:auto; padding: 6px 12px; font-size: 0.9rem;" onclick="deleteBeer('${beer.id}')">Excluir</button>
+                <button class="btn btn-danger" style="width:auto; padding: 6px 12px; font-size: 0.9rem;" onclick="deleteBeer('${beer.id}', this)">Excluir</button>
               </div>
             </div>
           `;
@@ -445,8 +445,9 @@
       finally { setBtnLoading('beerBtn', false, 'Salvar e Publicar Cerveja'); }
     });
 
-    async function deleteGallery(id) {
+    async function deleteGallery(id, btn) {
       if(!confirm('Tem certeza que deseja excluir esta foto da galeria?')) return;
+      btn.closest('.gallery-item').style.display = 'none';
       try {
         const fd = new FormData();
         fd.append('action', 'delete_gallery');
@@ -454,11 +455,12 @@
         const res = await apiCall(fd);
         showToast(res.message, 'success');
         refreshData();
-      } catch (err) { showToast(err.message, 'error'); }
+      } catch (err) { showToast(err.message, 'error'); refreshData(); }
     }
 
-    async function deleteBeer(id) {
+    async function deleteBeer(id, btn) {
       if(!confirm('CUIDADO: Tem certeza que deseja apagar essa cerveja do banco de dados definitivamente?')) return;
+      btn.closest('.beer-item').style.display = 'none';
       try {
         const fd = new FormData();
         fd.append('action', 'delete_beer');
@@ -466,7 +468,7 @@
         const res = await apiCall(fd);
         showToast(res.message, 'success');
         refreshData();
-      } catch (err) { showToast(err.message, 'error'); }
+      } catch (err) { showToast(err.message, 'error'); refreshData(); }
     }
 
     async function toggleBeer(id, isPublished) {
