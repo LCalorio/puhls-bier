@@ -107,6 +107,33 @@ export async function onRequestPost(context) {
     }
 
     // ----------------------------------------------------
+    // ACTION: UPDATE_GALLERY_ALT
+    // ----------------------------------------------------
+    if (action === 'update_gallery_alt') {
+      const siteRes = await fetch('https://site-api.datocms.com/site', { headers: headersCMA });
+      const siteData = await siteRes.json();
+      const primaryLocale = siteData.data.attributes.locales[0] || 'pt';
+
+      const res = await fetch(`https://site-api.datocms.com/uploads/${data.id}`, {
+        method: 'PUT',
+        headers: headersCMA,
+        body: JSON.stringify({
+          data: {
+            id: data.id,
+            type: 'upload',
+            attributes: {
+              default_field_metadata: {
+                [primaryLocale]: { alt: data.alt || '', title: null, custom_data: {} }
+              }
+            }
+          }
+        })
+      });
+      if (!res.ok) throw new Error('Falha ao atualizar a descrição da imagem.');
+      return new Response(JSON.stringify({ success: true, message: 'Descrição atualizada!' }), { status: 200 });
+    }
+
+    // ----------------------------------------------------
     // ACTION: CREATE_BEER
     // ----------------------------------------------------
     if (action === 'create_beer') {
@@ -155,6 +182,58 @@ export async function onRequestPost(context) {
       }
 
       return new Response(JSON.stringify({ success: true, message: 'Cerveja cadastrada com sucesso!' }), { status: 200 });
+    }
+
+    // ----------------------------------------------------
+    // ACTION: UPDATE_BEER
+    // ----------------------------------------------------
+    if (action === 'update_beer') {
+      let imageId = data.oldImageId;
+
+      // 1. Se veio um novo arquivo, fazemos o upload e substituimos o ID
+      if (file) {
+        imageId = await uploadToDatoCMS(file, token, readToken, ['rotulo'], `Rótulo ${data.nome}`);
+        
+        // Exclui a imagem antiga permanentemente, conforme solicitado
+        if (data.oldImageId && data.oldImageId !== 'undefined' && data.oldImageId !== 'null') {
+          // Não esperamos o await para não travar a UI caso falhe
+          fetch(`https://site-api.datocms.com/uploads/${data.oldImageId}`, {
+            method: 'DELETE',
+            headers: headersCMA
+          }).catch(e => console.error('Erro ao deletar imagem antiga:', e));
+        }
+      }
+
+      // 2. Price format
+      let parsedPrice = data.preco ? data.preco.toString() : '0';
+
+      // 3. Update the Item
+      const updateItemRes = await fetch(`https://site-api.datocms.com/items/${data.id}`, {
+        method: 'PUT',
+        headers: headersCMA,
+        body: JSON.stringify({
+          data: {
+            id: data.id,
+            type: 'item',
+            attributes: {
+              nome: data.nome,
+              estilo: data.estilo,
+              preco: parsedPrice,
+              tamanho: data.tamanho,
+              categoria: data.categoria,
+              desc: data.desc,
+              imagem: imageId && imageId !== 'null' ? { upload_id: imageId } : null
+            }
+          }
+        })
+      });
+
+      if (!updateItemRes.ok) {
+        const errTxt = await updateItemRes.text();
+        throw new Error(`Falha ao atualizar cerveja: ${errTxt}`);
+      }
+
+      return new Response(JSON.stringify({ success: true, message: 'Cerveja atualizada com sucesso!' }), { status: 200 });
     }
 
     // ----------------------------------------------------

@@ -141,6 +141,15 @@
       .tab-btn { flex: 1 1 auto; text-align: center; font-size: 1rem; padding: 8px 16px; }
       .status-label { text-align: left; width: auto; }
     }
+
+      /* Modals */
+      .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; align-items: center; justify-content: center; padding: 20px; overflow-y: auto; backdrop-filter: blur(5px); }
+      .modal-content { background: var(--bg-dark); padding: 30px; border-radius: 12px; width: 100%; border: 1px solid var(--border); margin: auto; }
+      .modal-content.sm { max-width: 500px; }
+      .modal-content.lg { max-width: 800px; }
+      .modal-header { margin-top: 0; margin-bottom: 20px; font-family: 'Bebas Neue'; font-size: 2.2rem; letter-spacing: 1px; }
+      .btn-secondary { background: transparent; border: 1px solid rgba(255,255,255,0.3); color: var(--white); }
+      .btn-secondary:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.6); box-shadow: none; }
   </style>
 </head>
 <body>
@@ -371,11 +380,15 @@
         galleryGrid.innerHTML = '<p style="color:var(--muted)">Nenhuma foto na galeria.</p>';
       } else {
         data.allUploads.forEach(img => {
+          const safeAlt = img.alt ? img.alt.replace(/'/g, "\\'") : '';
           galleryGrid.innerHTML += `
             <div class="gallery-item">
-              <img src="${img.url}?w=300&h=300&fit=crop" alt="${img.alt}">
+              <img src="${img.url}?w=300&h=300&fit=crop" alt="${img.alt || ''}">
               <div class="delete-overlay">
-                <button class="btn btn-danger" style="width:auto; padding: 8px;" onclick="deleteGallery('${img.id}', this)">Excluir</button>
+                <div style="display:flex; gap:8px;">
+                  <button class="btn btn-secondary" style="width:auto; padding: 8px; font-size:0.8rem" onclick="openEditGallery('${img.id}', '${safeAlt}')">Editar</button>
+                  <button class="btn btn-danger" style="width:auto; padding: 8px;" onclick="deleteGallery('${img.id}', this)">Excluir</button>
+                </div>
               </div>
             </div>
           `;
@@ -392,6 +405,7 @@
           const statusText = isPublished ? 'Em Estoque' : 'Esgotado';
           const statusClass = isPublished ? 'active' : 'draft';
           const imgUrl = beer.imagem ? beer.imagem.url : '';
+          const beerJsonStr = encodeURIComponent(JSON.stringify(beer));
 
           beerList.innerHTML += `
             <div class="beer-item">
@@ -408,6 +422,7 @@
                   <input type="checkbox" ${isPublished ? 'checked' : ''} onchange="toggleBeer('${beer.id}', this.checked, this)">
                   <span class="slider"></span>
                 </label>
+                <button class="btn btn-secondary" style="width:auto; padding: 6px 12px; font-size: 0.9rem;" onclick="openEditBeer('${beerJsonStr}')">Editar</button>
                 <button class="btn btn-danger" style="width:auto; padding: 6px 12px; font-size: 0.9rem;" onclick="deleteBeer('${beer.id}', '${beer.imagem?.id}', this)">Excluir</button>
               </div>
             </div>
@@ -469,6 +484,83 @@
       } catch (err) { showToast(err.message, 'error'); setTimeout(refreshData, 2000); }
     }
 
+    // --- MODAL & EDIT FUNCTIONS ---
+    function closeModal(id) {
+      document.getElementById(id).style.display = 'none';
+    }
+
+    function openEditGallery(id, currentAlt) {
+      document.getElementById('editGalleryId').value = id;
+      document.getElementById('editGalleryAlt').value = (currentAlt && currentAlt !== 'null') ? currentAlt : '';
+      document.getElementById('editGalleryModal').style.display = 'flex';
+    }
+
+    document.getElementById('editGalleryForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      setBtnLoading('editGalleryBtn', true);
+      try {
+        const fd = new FormData();
+        fd.append('action', 'update_gallery_alt');
+        fd.append('id', document.getElementById('editGalleryId').value);
+        fd.append('alt', document.getElementById('editGalleryAlt').value);
+        
+        const res = await apiCall(fd);
+        showToast(res.message, 'success');
+        closeModal('editGalleryModal');
+        setTimeout(refreshData, 1500);
+      } catch (err) { showToast(err.message, 'error'); }
+      finally { setBtnLoading('editGalleryBtn', false, 'Salvar Alterações'); }
+    });
+
+    document.getElementById('editBeerImg').addEventListener('change', (e) => {
+      const text = e.target.files.length > 0 ? e.target.files[0].name : 'Selecionar Nova Imagem';
+      document.getElementById('editBeerFileText').innerText = text;
+    });
+
+    function openEditBeer(beerJsonString) {
+      const beer = JSON.parse(decodeURIComponent(beerJsonString));
+      document.getElementById('editBeerId').value = beer.id;
+      document.getElementById('editBeerOldImageId').value = beer.imagem ? beer.imagem.id : '';
+      document.getElementById('editBeerName').value = beer.nome;
+      document.getElementById('editBeerStyle').value = beer.estilo;
+      document.getElementById('editBeerPrice').value = beer.preco;
+      document.getElementById('editBeerSize').value = beer.tamanho;
+      document.getElementById('editBeerCategory').value = beer.categoria;
+      document.getElementById('editBeerDesc').value = beer.desc;
+      document.getElementById('editBeerFileText').innerText = 'Selecionar Nova Imagem (Opcional)';
+      document.getElementById('editBeerImg').value = '';
+      
+      document.getElementById('editBeerModal').style.display = 'flex';
+    }
+
+    document.getElementById('editBeerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      setBtnLoading('editBeerSubmitBtn', true);
+      try {
+        const fd = new FormData();
+        fd.append('action', 'update_beer');
+        fd.append('id', document.getElementById('editBeerId').value);
+        fd.append('oldImageId', document.getElementById('editBeerOldImageId').value);
+        fd.append('nome', document.getElementById('editBeerName').value);
+        fd.append('estilo', document.getElementById('editBeerStyle').value);
+        fd.append('preco', document.getElementById('editBeerPrice').value);
+        fd.append('tamanho', document.getElementById('editBeerSize').value);
+        fd.append('categoria', document.getElementById('editBeerCategory').value);
+        fd.append('desc', document.getElementById('editBeerDesc').value);
+        
+        const fileInput = document.getElementById('editBeerImg');
+        if (fileInput.files.length > 0) {
+          fd.append('file', fileInput.files[0]);
+        }
+        
+        const res = await apiCall(fd);
+        showToast(res.message, 'success');
+        closeModal('editBeerModal');
+        setTimeout(refreshData, 1500);
+      } catch (err) { showToast(err.message, 'error'); }
+      finally { setBtnLoading('editBeerSubmitBtn', false, 'Salvar Alterações'); }
+    });
+
     async function deleteBeer(id, imageId, btn) {
       if(!confirm('CUIDADO: Tem certeza que deseja apagar essa cerveja do banco de dados definitivamente?')) return;
       btn.closest('.beer-item').style.display = 'none';
@@ -505,5 +597,77 @@
       }
     }
   </script>
+
+  <!-- Modal Editar Galeria -->
+  <div id="editGalleryModal" class="modal">
+    <div class="modal-content sm">
+      <h2 class="modal-header">Editar Foto da Galeria</h2>
+      <form id="editGalleryForm">
+        <input type="hidden" id="editGalleryId">
+        <div class="form-group">
+          <label>Descrição (Alt Text)</label>
+          <input type="text" id="editGalleryAlt" required>
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+          <button type="submit" class="btn" id="editGalleryBtn">Salvar Alterações</button>
+          <button type="button" class="btn btn-secondary" onclick="closeModal('editGalleryModal')">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Editar Rótulo -->
+  <div id="editBeerModal" class="modal">
+    <div class="modal-content lg">
+      <h2 class="modal-header">Editar Rótulo</h2>
+      <form id="editBeerForm">
+        <input type="hidden" id="editBeerId">
+        <input type="hidden" id="editBeerOldImageId">
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Nome da Cerveja</label>
+            <input type="text" id="editBeerName" required>
+          </div>
+          <div class="form-group">
+            <label>Estilo</label>
+            <input type="text" id="editBeerStyle" required>
+          </div>
+          <div class="form-group">
+            <label>Preço (R$)</label>
+            <input type="text" id="editBeerPrice" required>
+          </div>
+          <div class="form-group">
+            <label>Tamanho</label>
+            <input type="text" id="editBeerSize" required>
+          </div>
+          <div class="form-group">
+            <label>Categoria</label>
+            <select id="editBeerCategory">
+              <option value="lager">Lager</option>
+              <option value="ale">Ale</option>
+              <option value="ipa">IPA</option>
+              <option value="especial">Especial</option>
+              <option value="barril">Barril / Chopp</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Substituir Rótulo (Opcional)</label>
+            <div class="file-drop-area" style="height: 44px; position: relative;">
+              <span style="color:var(--muted); font-size: 0.8rem;" id="editBeerFileText">Selecionar Nova Imagem</span>
+              <input type="file" id="editBeerImg" accept="image/png, image/jpeg, image/webp" style="position: absolute; inset: 0; opacity: 0; cursor: pointer;">
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Descrição Sensorial</label>
+          <textarea id="editBeerDesc" rows="3" required></textarea>
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+          <button type="submit" class="btn" id="editBeerSubmitBtn">Salvar Alterações</button>
+          <button type="button" class="btn btn-secondary" onclick="closeModal('editBeerModal')">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </body>
 </html>
