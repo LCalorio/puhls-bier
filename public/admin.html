@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Puhl's Bier | Admin CMS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0a0a0c;
+      --card-bg: rgba(20, 20, 24, 0.7);
+      --pink: #ff1493;
+      --yellow: #fddb3a;
+      --white: #f5f5f5;
+      --muted: #a0a0a0;
+      --border: rgba(255, 20, 147, 0.2);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--white);
+      min-height: 100vh;
+      background-image: radial-gradient(circle at 15% 50%, rgba(255, 20, 147, 0.15) 0%, transparent 50%), radial-gradient(circle at 85% 30%, rgba(253, 219, 58, 0.1) 0%, transparent 50%);
+      background-attachment: fixed;
+    }
+    .container { max-width: 900px; margin: 0 auto; padding: 40px 20px; }
+    
+    /* Login View */
+    #loginView {
+      display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80vh;
+    }
+    .login-box {
+      background: var(--card-bg); backdrop-filter: blur(20px); border: 1px solid var(--border);
+      border-radius: 16px; padding: 40px; width: 100%; max-width: 400px; box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    }
+    .login-box h1 { font-family: 'Bebas Neue'; font-size: 3rem; text-align: center; margin-bottom: 20px; letter-spacing: 2px;}
+
+    /* Common Forms & Inputs */
+    .form-group { margin-bottom: 20px; }
+    label { display: block; font-size: 0.85rem; font-weight: 500; color: var(--muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+    input[type="password"], input[type="text"], input[type="number"], select, textarea {
+      width: 100%; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px;
+      padding: 12px 16px; color: var(--white); font-family: 'Inter', sans-serif; font-size: 1rem; outline: none; transition: 0.3s;
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--pink); box-shadow: 0 0 0 2px rgba(255, 20, 147, 0.2); }
+    
+    .btn {
+      width: 100%; background: linear-gradient(135deg, var(--pink), #cc1076); color: var(--white); border: none;
+      border-radius: 8px; padding: 14px; font-family: 'Barlow Condensed'; font-size: 1.2rem; font-weight: 700;
+      letter-spacing: 1px; text-transform: uppercase; cursor: pointer; transition: 0.3s; display: flex; justify-content: center; align-items: center; gap: 10px;
+    }
+    .btn:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(255, 20, 147, 0.3); }
+    .btn:disabled { background: #333; color: #777; cursor: not-allowed; transform: none; box-shadow: none; }
+    .btn-danger { background: linear-gradient(135deg, #e74c3c, #c0392b); }
+    .btn-danger:hover { box-shadow: 0 10px 20px rgba(231, 76, 60, 0.3); }
+
+    /* Dashboard View */
+    #dashboardView { display: none; }
+    .dash-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+    .dash-header h1 { font-family: 'Bebas Neue'; font-size: 2.5rem; letter-spacing: 1px;}
+    
+    /* Tabs */
+    .tabs { display: flex; gap: 10px; margin-bottom: 30px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; }
+    .tab-btn {
+      background: transparent; border: 1px solid rgba(255,255,255,0.2); color: var(--muted); padding: 10px 24px;
+      border-radius: 30px; font-family: 'Barlow Condensed'; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; transition: 0.3s;
+    }
+    .tab-btn.active { background: var(--pink); color: #fff; border-color: var(--pink); }
+    
+    .tab-content { display: none; animation: fadeIn 0.4s; }
+    .tab-content.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Grid & Lists */
+    .panel { background: var(--card-bg); backdrop-filter: blur(10px); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 30px; }
+    .panel h2 { font-family: 'Barlow Condensed'; margin-bottom: 20px; color: var(--yellow); text-transform: uppercase; font-size: 1.5rem; }
+    
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    
+    .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; }
+    .gallery-item { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
+    .gallery-item img { width: 100%; height: 100%; object-fit: cover; }
+    .gallery-item .delete-overlay {
+      position: absolute; inset: 0; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center;
+      opacity: 0; transition: 0.3s;
+    }
+    .gallery-item:hover .delete-overlay { opacity: 1; }
+
+    .beer-list { display: flex; flex-direction: column; gap: 12px; }
+    .beer-item {
+      display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.4);
+      padding: 16px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);
+    }
+    .beer-info { display: flex; align-items: center; gap: 16px; }
+    .beer-info img { width: 40px; height: 40px; border-radius: 4px; object-fit: cover; }
+    .beer-name { font-weight: 600; font-size: 1.1rem; }
+    .beer-style { font-size: 0.85rem; color: var(--muted); }
+    .beer-actions { display: flex; align-items: center; gap: 16px; }
+    
+    /* Toggle Switch */
+    .switch { position: relative; display: inline-block; width: 46px; height: 24px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #333; transition: .4s; border-radius: 24px; }
+    .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+    input:checked + .slider { background-color: #2ecc71; }
+    input:checked + .slider:before { transform: translateX(22px); }
+    .status-label { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; width: 80px; text-align: right;}
+    .status-label.active { color: #2ecc71; }
+    .status-label.draft { color: #e74c3c; }
+
+    /* File Drop Area */
+    .file-drop-area {
+      position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      width: 100%; height: 120px; background: rgba(0, 0, 0, 0.3); border: 2px dashed rgba(255, 255, 255, 0.15);
+      border-radius: 8px; cursor: pointer; transition: 0.3s; overflow: hidden;
+    }
+    .file-drop-area:hover { border-color: var(--yellow); }
+    .file-drop-area input[type="file"] { position: absolute; left: 0; top: 0; height: 100%; width: 100%; cursor: pointer; opacity: 0; }
+    .preview-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background:#000; display:none; z-index: 5;}
+
+    /* Status Msg */
+    .toast {
+      position: fixed; bottom: 20px; right: 20px; padding: 16px 24px; border-radius: 8px; color: white;
+      font-weight: 500; box-shadow: 0 10px 20px rgba(0,0,0,0.3); transform: translateY(100px); opacity: 0; transition: 0.4s; z-index: 1000;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { background: #2ecc71; }
+    .toast.error { background: #e74c3c; }
+    
+    .loader { display: none; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s infinite linear; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="toast">Mensagem</div>
+
+  <div class="container">
+    
+    <!-- LOGIN VIEW -->
+    <div id="loginView">
+      <div class="login-box">
+        <h1>CMS PUHL'S BIER</h1>
+        <form id="loginForm">
+          <div class="form-group">
+            <label>Senha Mestre</label>
+            <input type="password" id="adminPassword" required placeholder="Digite a senha">
+          </div>
+          <button type="submit" class="btn" id="loginBtn">
+            <span id="loginBtnText">Acessar Painel</span>
+            <div class="loader" id="loginLoader"></div>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- DASHBOARD VIEW -->
+    <div id="dashboardView">
+      <div class="dash-header">
+        <h1>Gerenciador de Conteúdo</h1>
+        <button class="btn" style="width: auto; padding: 8px 16px; font-size: 1rem;" onclick="location.reload()">Sair</button>
+      </div>
+
+      <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('gallery')">Galeria de Fotos</button>
+        <button class="tab-btn" onclick="switchTab('beers')">Rótulos (Cervejas)</button>
+      </div>
+
+      <!-- TAB: GALLERY -->
+      <div id="tab-gallery" class="tab-content active">
+        <div class="panel">
+          <h2>Adicionar Nova Foto</h2>
+          <form id="galleryForm">
+            <div class="grid-2">
+              <div class="form-group">
+                <label>Arquivo da Imagem</label>
+                <div class="file-drop-area">
+                  <span style="color:var(--muted)">Clique ou arraste a foto</span>
+                  <input type="file" id="galleryFile" accept="image/*" required onchange="previewFile(this, 'galleryPreview')">
+                  <img id="galleryPreview" class="preview-image">
+                </div>
+              </div>
+              <div class="form-group">
+                <label>Descrição (Alt Text)</label>
+                <input type="text" id="galleryAlt" required placeholder="Ex: Galera bebendo no pub">
+                <button type="submit" class="btn" style="margin-top: 24px;" id="galleryBtn">
+                  <span id="galleryBtnText">Publicar na Galeria</span>
+                  <div class="loader" id="galleryLoader"></div>
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <div class="panel">
+          <h2>Fotos Publicadas</h2>
+          <div class="gallery-grid" id="galleryGrid">
+            <!-- Injetado via JS -->
+            <p style="color:var(--muted)">Carregando galeria...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: BEERS -->
+      <div id="tab-beers" class="tab-content">
+        <div class="panel">
+          <h2>Cadastrar Novo Rótulo</h2>
+          <form id="beerForm">
+            <div class="grid-2">
+              <div class="form-group">
+                <label>Nome da Cerveja</label>
+                <input type="text" id="beerName" required placeholder="Ex: Puhl's IPA">
+              </div>
+              <div class="form-group">
+                <label>Estilo</label>
+                <input type="text" id="beerStyle" required placeholder="Ex: American IPA">
+              </div>
+              <div class="form-group">
+                <label>Preço (R$)</label>
+                <input type="text" id="beerPrice" required placeholder="Ex: 25,00">
+              </div>
+              <div class="form-group">
+                <label>Tamanho</label>
+                <input type="text" id="beerSize" required placeholder="Ex: Lata 473ml">
+              </div>
+              <div class="form-group">
+                <label>Categoria</label>
+                <select id="beerCategory">
+                  <option value="lata">Lata</option>
+                  <option value="chopp">Chopp (Tap)</option>
+                  <option value="garrafa">Garrafa</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Arte do Rótulo</label>
+                <div class="file-drop-area" style="height: 44px;">
+                  <span style="color:var(--muted); font-size: 0.8rem;">Selecionar Imagem</span>
+                  <input type="file" id="beerFile" accept="image/*" required onchange="previewFile(this, 'beerPreview')">
+                  <img id="beerPreview" class="preview-image">
+                </div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Descrição Sensorial</label>
+              <textarea id="beerDesc" rows="3" required placeholder="Ex: Notas cítricas e amargor limpo..."></textarea>
+            </div>
+            <button type="submit" class="btn" id="beerBtn">
+              <span id="beerBtnText">Salvar e Publicar Cerveja</span>
+              <div class="loader" id="beerLoader"></div>
+            </button>
+          </form>
+        </div>
+
+        <div class="panel">
+          <h2>Rótulos e Estoque</h2>
+          <div class="beer-list" id="beerList">
+            <!-- Injetado via JS -->
+            <p style="color:var(--muted)">Carregando cervejas...</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    let masterPassword = '';
+
+    // --- UTILS ---
+    function showToast(msg, type) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.className = `toast show ${type}`;
+      setTimeout(() => toast.classList.remove('show'), 3000);
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById(`tab-${tabId}`).classList.add('active');
+    }
+
+    function previewFile(input, previewId) {
+      const preview = document.getElementById(previewId);
+      if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          preview.src = e.target.result;
+          preview.style.display = 'block';
+        }
+        reader.readAsDataURL(input.files[0]);
+      } else {
+        preview.style.display = 'none';
+      }
+    }
+
+    function setBtnLoading(btnId, isLoading, defaultText) {
+      const btn = document.getElementById(btnId);
+      const textSpan = document.getElementById(btnId + 'Text');
+      const loader = document.getElementById(btnId.replace('Btn', 'Loader'));
+      btn.disabled = isLoading;
+      textSpan.textContent = isLoading ? 'Processando...' : defaultText;
+      loader.style.display = isLoading ? 'block' : 'none';
+    }
+
+    // --- API HANDLER ---
+    async function apiCall(formData) {
+      const res = await fetch('/api/admin', {
+        method: 'POST',
+        headers: { 'X-Admin-Password': masterPassword },
+        body: formData
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Erro na comunicação com servidor.');
+      return json;
+    }
+
+    // --- LOGIN ---
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      masterPassword = document.getElementById('adminPassword').value;
+      setBtnLoading('loginBtn', true, 'Acessar Painel');
+      
+      try {
+        const fd = new FormData();
+        fd.append('action', 'get_data');
+        const res = await apiCall(fd);
+        
+        // Success! Hide login, show dash
+        document.getElementById('loginView').style.display = 'none';
+        document.getElementById('dashboardView').style.display = 'block';
+        renderDashboard(res.data);
+      } catch (err) {
+        showToast(err.message, 'error');
+      } finally {
+        setBtnLoading('loginBtn', false, 'Acessar Painel');
+      }
+    });
+
+    // --- DATA FETCHING & RENDERING ---
+    async function refreshData() {
+      const fd = new FormData();
+      fd.append('action', 'get_data');
+      const res = await apiCall(fd);
+      renderDashboard(res.data);
+    }
+
+    function renderDashboard(data) {
+      const galleryGrid = document.getElementById('galleryGrid');
+      const beerList = document.getElementById('beerList');
+
+      // Render Gallery
+      galleryGrid.innerHTML = '';
+      if (!data.allUploads || data.allUploads.length === 0) {
+        galleryGrid.innerHTML = '<p style="color:var(--muted)">Nenhuma foto na galeria.</p>';
+      } else {
+        data.allUploads.forEach(img => {
+          galleryGrid.innerHTML += `
+            <div class="gallery-item">
+              <img src="${img.url}?w=300&h=300&fit=crop" alt="${img.alt}">
+              <div class="delete-overlay">
+                <button class="btn btn-danger" style="width:auto; padding: 8px;" onclick="deleteGallery('${img.id}')">Excluir</button>
+              </div>
+            </div>
+          `;
+        });
+      }
+
+      // Render Beers
+      beerList.innerHTML = '';
+      if (!data.allCervejas || data.allCervejas.length === 0) {
+        beerList.innerHTML = '<p style="color:var(--muted)">Nenhuma cerveja cadastrada.</p>';
+      } else {
+        data.allCervejas.forEach(beer => {
+          const isPublished = beer._status === 'published';
+          const statusText = isPublished ? 'Em Estoque' : 'Esgotado';
+          const statusClass = isPublished ? 'active' : 'draft';
+          const imgUrl = beer.imagem ? beer.imagem.url : '';
+
+          beerList.innerHTML += `
+            <div class="beer-item">
+              <div class="beer-info">
+                <img src="${imgUrl}?w=100&h=100&fit=crop" alt="">
+                <div>
+                  <div class="beer-name">${beer.nome}</div>
+                  <div class="beer-style">${beer.estilo} | ${beer.tamanho} | R$ ${beer.preco}</div>
+                </div>
+              </div>
+              <div class="beer-actions">
+                <span class="status-label ${statusClass}">${statusText}</span>
+                <label class="switch">
+                  <input type="checkbox" ${isPublished ? 'checked' : ''} onchange="toggleBeer('${beer.id}', this.checked)">
+                  <span class="slider"></span>
+                </label>
+                <button class="btn btn-danger" style="width:auto; padding: 6px 12px; font-size: 0.9rem;" onclick="deleteBeer('${beer.id}')">Excluir</button>
+              </div>
+            </div>
+          `;
+        });
+      }
+    }
+
+    // --- ACTIONS ---
+    document.getElementById('galleryForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      setBtnLoading('galleryBtn', true, 'Publicar na Galeria');
+      try {
+        const fd = new FormData();
+        fd.append('action', 'upload_gallery');
+        fd.append('file', document.getElementById('galleryFile').files[0]);
+        fd.append('alt', document.getElementById('galleryAlt').value);
+        const res = await apiCall(fd);
+        showToast(res.message, 'success');
+        document.getElementById('galleryForm').reset();
+        document.getElementById('galleryPreview').style.display = 'none';
+        refreshData();
+      } catch (err) { showToast(err.message, 'error'); } 
+      finally { setBtnLoading('galleryBtn', false, 'Publicar na Galeria'); }
+    });
+
+    document.getElementById('beerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      setBtnLoading('beerBtn', true, 'Salvar e Publicar Cerveja');
+      try {
+        const fd = new FormData();
+        fd.append('action', 'create_beer');
+        fd.append('nome', document.getElementById('beerName').value);
+        fd.append('estilo', document.getElementById('beerStyle').value);
+        fd.append('preco', document.getElementById('beerPrice').value);
+        fd.append('tamanho', document.getElementById('beerSize').value);
+        fd.append('categoria', document.getElementById('beerCategory').value);
+        fd.append('desc', document.getElementById('beerDesc').value);
+        fd.append('file', document.getElementById('beerFile').files[0]);
+        const res = await apiCall(fd);
+        showToast(res.message, 'success');
+        document.getElementById('beerForm').reset();
+        document.getElementById('beerPreview').style.display = 'none';
+        refreshData();
+      } catch (err) { showToast(err.message, 'error'); } 
+      finally { setBtnLoading('beerBtn', false, 'Salvar e Publicar Cerveja'); }
+    });
+
+    async function deleteGallery(id) {
+      if(!confirm('Tem certeza que deseja excluir esta foto da galeria?')) return;
+      try {
+        const fd = new FormData();
+        fd.append('action', 'delete_gallery');
+        fd.append('id', id);
+        const res = await apiCall(fd);
+        showToast(res.message, 'success');
+        refreshData();
+      } catch (err) { showToast(err.message, 'error'); }
+    }
+
+    async function deleteBeer(id) {
+      if(!confirm('CUIDADO: Tem certeza que deseja apagar essa cerveja do banco de dados definitivamente?')) return;
+      try {
+        const fd = new FormData();
+        fd.append('action', 'delete_beer');
+        fd.append('id', id);
+        const res = await apiCall(fd);
+        showToast(res.message, 'success');
+        refreshData();
+      } catch (err) { showToast(err.message, 'error'); }
+    }
+
+    async function toggleBeer(id, isPublished) {
+      try {
+        const fd = new FormData();
+        fd.append('action', 'toggle_beer');
+        fd.append('id', id);
+        fd.append('publish', isPublished);
+        await apiCall(fd);
+        showToast('Estoque atualizado!', 'success');
+        refreshData();
+      } catch (err) { 
+        showToast(err.message, 'error'); 
+        refreshData(); // revert toggle visually on failure
+      }
+    }
+  </script>
+</body>
+</html>
