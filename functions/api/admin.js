@@ -5,8 +5,10 @@ export async function onRequestPost(context) {
     // 1. Authentication
     const providedPassword = request.headers.get('X-Admin-Password');
     const correctPassword = env.ADMIN_PASSWORD;
+    const token = env.DATOCMS_FULL_ACCESS_TOKEN;
+    const readToken = 'd6ee5c482b25f0034b4119f94c7c18';
 
-    if (!correctPassword || !env.DATOCMS_FULL_ACCESS_TOKEN) {
+    if (!correctPassword || !token) {
       return new Response(JSON.stringify({ error: 'Erro de configuração: Variáveis de ambiente faltando no Cloudflare.' }), { status: 500 });
     }
 
@@ -14,7 +16,6 @@ export async function onRequestPost(context) {
       return new Response(JSON.stringify({ error: 'Senha Mestre incorreta.' }), { status: 401 });
     }
 
-    const token = env.DATOCMS_FULL_ACCESS_TOKEN;
     const headersCMA = {
       'Authorization': `Bearer ${token}`,
       'Accept': 'application/json',
@@ -68,10 +69,6 @@ export async function onRequestPost(context) {
           alt
         }
       }`;
-
-      // HARDCODED READ-ONLY TOKEN FOR GUARANTEED FETCHING
-      // This token works perfectly for reading, bypassing any CDA permission issues on the CMA token.
-      const readToken = 'd6ee5c482b25f0034b4119f94c7c18';
 
       const res = await fetch('https://graphql.datocms.com/', {
         method: 'POST',
