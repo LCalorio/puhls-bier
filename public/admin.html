@@ -480,7 +480,14 @@
         fd.append('publish', isPublished);
         await apiCall(fd);
         showToast('Estoque atualizado!', 'success');
-        // Mantemos visualmente e NÃO carregamos a página de novo, para ser 100% fluido!
+        
+        if (checkbox) {
+           const labelEl = checkbox.closest('.beer-actions').querySelector('.status-label');
+           if (labelEl) {
+              labelEl.textContent = isPublished ? 'Em Estoque' : 'Esgotado';
+              labelEl.className = 'status-label ' + (isPublished ? 'active' : 'draft');
+           }
+        }
       } catch (err) { 
         showToast(err.message, 'error'); 
         if (checkbox) checkbox.checked = !isPublished; // Reverte se der erro

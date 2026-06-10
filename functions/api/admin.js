@@ -269,39 +269,38 @@ async function uploadToDatoCMS(file, token, tags, altText) {
   let finalId = uploadFinalData.data.id;
   
   if (uploadFinalData.data.type === 'job') {
-    let isDone = false;
-    let attempts = 0;
-    while (!isDone && attempts < 15) {
-      await new Promise(r => setTimeout(r, 1000));
-      const jobRes = await fetch(`https://site-api.datocms.com/job-results/${finalId}`, {
-        headers: headersCMA,
-        redirect: 'manual' // IMPEDE O CLOUDFLARE DE SEGUIR O REDIRECIONAMENTO (QUE DAVA ERRO 404)
-      });
-      
-      if (jobRes.status === 303 || jobRes.status === 302) {
-        // O DatoCMS retorna 303 e redireciona para a URL do Upload recém-criado!
-        const location = jobRes.headers.get('location');
-        if (location) {
-          finalId = location.split('/').pop();
+      let isDone = false;
+      let attempts = 0;
+      while (!isDone && attempts < 15) {
+        await new Promise(r => setTimeout(r, 1000));
+        const jobRes = await fetch(`https://site-api.datocms.com/job-results/${finalId}`, {
+          headers: headersCMA,
+          redirect: 'follow'
+        });
+        
+        // Se a requisição seguiu um redirect para a URL final do Upload (mesmo que dê 404 sem Auth), o ID está na URL!
+        if (jobRes.url && jobRes.url.includes('/uploads/')) {
+          finalId = jobRes.url.split('/').pop();
           isDone = true;
+          break;
+        }
+
+        if (jobRes.status === 202) {
+          // Processando... continua o loop
+        } else if (jobRes.status === 200) {
+          const jobData = await jobRes.json();
+          if (jobData.data && jobData.data.type === 'upload') {
+            finalId = jobData.data.id;
+            isDone = true;
+          } else if (jobData.data && jobData.data.attributes && jobData.data.attributes.status === 'failed') {
+            throw new Error('Processamento falhou internamente no DatoCMS.');
+          }
         } else {
-          throw new Error('Upload processado, mas link de destino não encontrado.');
+          const errText = await jobRes.text();
+          throw new Error(`Falha no processamento da imagem: HTTP ${jobRes.status} - ${errText}`);
         }
-      } else if (jobRes.status === 200) {
-        const jobData = await jobRes.json();
-        // Pode retornar o job payload diretamente dependendo da versão
-        if (jobData.data && jobData.data.type === 'upload') {
-          finalId = jobData.data.id;
-          isDone = true;
-        } else if (jobData.data && jobData.data.attributes && jobData.data.attributes.status === 'failed') {
-          throw new Error('Processamento falhou internamente no DatoCMS.');
-        }
-      } else if (jobRes.status !== 202) {
-        const errText = await jobRes.text();
-        throw new Error(`Falha no processamento da imagem: HTTP ${jobRes.status} - ${errText}`);
+        attempts++;
       }
-      attempts++;
-    }
   }
 
   return finalId;
