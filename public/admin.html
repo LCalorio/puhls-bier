@@ -276,7 +276,7 @@
         </div>
 
         <div class="panel">
-          <h2>Rótulos e Estoque</h2>
+          <h2>Rótulos e Estoque <span id="beerCountLabel" style="font-size: 1rem; color: var(--muted); font-weight: normal; margin-left: 10px;"></span></h2>
           <div class="beer-list" id="beerList">
             <!-- Injetado via JS -->
             <p style="color:var(--muted)">Carregando cervejas...</p>
@@ -477,8 +477,10 @@
       // Render Beers
       beerList.innerHTML = '';
       if (!data.allCervejas || data.allCervejas.length === 0) {
+        document.getElementById('beerCountLabel').textContent = '(0 cadastrados)';
         beerList.innerHTML = '<p style="color:var(--muted)">Nenhuma cerveja cadastrada.</p>';
       } else {
+        document.getElementById('beerCountLabel').textContent = `(${data.allCervejas.length} cadastrados)`;
         data.allCervejas.forEach(beer => {
           const isPublished = beer._status === 'published';
           const statusText = isPublished ? 'Em Estoque' : 'Esgotado';
@@ -501,8 +503,10 @@
                   <input type="checkbox" ${isPublished ? 'checked' : ''} onchange="toggleBeer('${beer.id}', this.checked, this)">
                   <span class="slider"></span>
                 </label>
-                <button class="btn btn-secondary" style="width:auto; padding: 6px 12px; font-size: 0.9rem;" onclick="openEditBeer('${beerJsonStr}')">Editar</button>
-                <button class="btn btn-danger" style="width:auto; padding: 6px 12px; font-size: 0.9rem;" onclick="deleteBeer('${beer.id}', '${beer.imagem?.id}', this)">Excluir</button>
+                <div style="display:flex; gap:8px;">
+                  <button class="btn btn-secondary" style="width:auto; padding: 6px 12px; font-size: 0.9rem;" onclick="openEditBeer('${beerJsonStr}')">Editar</button>
+                  <button class="btn btn-danger" style="width:auto; padding: 6px 12px; font-size: 0.9rem;" onclick="deleteBeer('${beer.id}', '${beer.imagem?.id}', this)">Excluir</button>
+                </div>
               </div>
             </div>
           `;
