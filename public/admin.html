@@ -130,6 +130,17 @@
     
     .loader { display: none; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 1s infinite linear; }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* --- MOBILE RESPONSIVENESS --- */
+    @media (max-width: 768px) {
+      .grid-2 { grid-template-columns: 1fr; }
+      .beer-item { flex-direction: column; align-items: flex-start; gap: 16px; }
+      .beer-actions { width: 100%; justify-content: flex-start; flex-wrap: wrap; }
+      .dash-header { flex-direction: column; gap: 16px; text-align: center; }
+      .tabs { flex-wrap: wrap; justify-content: center; }
+      .tab-btn { flex: 1 1 auto; text-align: center; font-size: 1rem; padding: 8px 16px; }
+      .status-label { text-align: left; width: auto; }
+    }
   </style>
 </head>
 <body>
