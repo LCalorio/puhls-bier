@@ -287,6 +287,78 @@
     </div>
   </div>
 
+  <!-- Modal Editar Galeria -->
+  <div id="editGalleryModal" class="modal">
+    <div class="modal-content sm">
+      <h2 class="modal-header">Editar Foto da Galeria</h2>
+      <form id="editGalleryForm">
+        <input type="hidden" id="editGalleryId">
+        <div class="form-group">
+          <label>Descrição (Alt Text)</label>
+          <input type="text" id="editGalleryAlt" required>
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+          <button type="submit" class="btn" id="editGalleryBtn">Salvar Alterações</button>
+          <button type="button" class="btn btn-secondary" onclick="closeModal('editGalleryModal')">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Editar Rótulo -->
+  <div id="editBeerModal" class="modal">
+    <div class="modal-content lg">
+      <h2 class="modal-header">Editar Rótulo</h2>
+      <form id="editBeerForm">
+        <input type="hidden" id="editBeerId">
+        <input type="hidden" id="editBeerOldImageId">
+        <div class="grid-2">
+          <div class="form-group">
+            <label>Nome da Cerveja</label>
+            <input type="text" id="editBeerName" required>
+          </div>
+          <div class="form-group">
+            <label>Estilo</label>
+            <input type="text" id="editBeerStyle" required>
+          </div>
+          <div class="form-group">
+            <label>Preço (R$)</label>
+            <input type="text" id="editBeerPrice" required>
+          </div>
+          <div class="form-group">
+            <label>Tamanho</label>
+            <input type="text" id="editBeerSize" required>
+          </div>
+          <div class="form-group">
+            <label>Categoria</label>
+            <select id="editBeerCategory">
+              <option value="lager">Lager</option>
+              <option value="ale">Ale</option>
+              <option value="ipa">IPA</option>
+              <option value="especial">Especial</option>
+              <option value="barril">Barril / Chopp</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Substituir Rótulo (Opcional)</label>
+            <div class="file-drop-area" style="height: 44px; position: relative;">
+              <span style="color:var(--muted); font-size: 0.8rem;" id="editBeerFileText">Selecionar Nova Imagem</span>
+              <input type="file" id="editBeerImg" accept="image/png, image/jpeg, image/webp" style="position: absolute; inset: 0; opacity: 0; cursor: pointer;">
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Descrição Sensorial</label>
+          <textarea id="editBeerDesc" rows="3" required></textarea>
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 20px;">
+          <button type="submit" class="btn" id="editBeerSubmitBtn">Salvar Alterações</button>
+          <button type="button" class="btn btn-secondary" onclick="closeModal('editBeerModal')">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script>
     let masterPassword = '';
 
@@ -598,76 +670,5 @@
     }
   </script>
 
-  <!-- Modal Editar Galeria -->
-  <div id="editGalleryModal" class="modal">
-    <div class="modal-content sm">
-      <h2 class="modal-header">Editar Foto da Galeria</h2>
-      <form id="editGalleryForm">
-        <input type="hidden" id="editGalleryId">
-        <div class="form-group">
-          <label>Descrição (Alt Text)</label>
-          <input type="text" id="editGalleryAlt" required>
-        </div>
-        <div style="display: flex; gap: 10px; margin-top: 20px;">
-          <button type="submit" class="btn" id="editGalleryBtn">Salvar Alterações</button>
-          <button type="button" class="btn btn-secondary" onclick="closeModal('editGalleryModal')">Cancelar</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Modal Editar Rótulo -->
-  <div id="editBeerModal" class="modal">
-    <div class="modal-content lg">
-      <h2 class="modal-header">Editar Rótulo</h2>
-      <form id="editBeerForm">
-        <input type="hidden" id="editBeerId">
-        <input type="hidden" id="editBeerOldImageId">
-        <div class="grid-2">
-          <div class="form-group">
-            <label>Nome da Cerveja</label>
-            <input type="text" id="editBeerName" required>
-          </div>
-          <div class="form-group">
-            <label>Estilo</label>
-            <input type="text" id="editBeerStyle" required>
-          </div>
-          <div class="form-group">
-            <label>Preço (R$)</label>
-            <input type="text" id="editBeerPrice" required>
-          </div>
-          <div class="form-group">
-            <label>Tamanho</label>
-            <input type="text" id="editBeerSize" required>
-          </div>
-          <div class="form-group">
-            <label>Categoria</label>
-            <select id="editBeerCategory">
-              <option value="lager">Lager</option>
-              <option value="ale">Ale</option>
-              <option value="ipa">IPA</option>
-              <option value="especial">Especial</option>
-              <option value="barril">Barril / Chopp</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Substituir Rótulo (Opcional)</label>
-            <div class="file-drop-area" style="height: 44px; position: relative;">
-              <span style="color:var(--muted); font-size: 0.8rem;" id="editBeerFileText">Selecionar Nova Imagem</span>
-              <input type="file" id="editBeerImg" accept="image/png, image/jpeg, image/webp" style="position: absolute; inset: 0; opacity: 0; cursor: pointer;">
-            </div>
-          </div>
-        </div>
-        <div class="form-group">
-          <label>Descrição Sensorial</label>
-          <textarea id="editBeerDesc" rows="3" required></textarea>
-        </div>
-        <div style="display: flex; gap: 10px; margin-top: 20px;">
-          <button type="submit" class="btn" id="editBeerSubmitBtn">Salvar Alterações</button>
-          <button type="button" class="btn btn-secondary" onclick="closeModal('editBeerModal')">Cancelar</button>
-        </div>
-      </form>
-    </div>
-  </div>
 </body>
 </html>
