@@ -263,37 +263,48 @@ async function uploadToDatoCMS(file, token, readToken, tags, altText) {
   if (!createUploadRes.ok) throw new Error('Falha ao finalizar o upload no DatoCMS.');
   const uploadFinalData = await createUploadRes.json();
   
-  if (uploadFinalData.data && uploadFinalData.data.type === 'upload') {
-    return uploadFinalData.data.id;
-  }
+  let finalId = uploadFinalData.data.id;
   
-  // O DatoCMS retornou um Job. Em vez de usar o /job-results (que está dando 404 falso),
-  // vamos consultar a API GraphQL com segurança até que a imagem apareça na biblioteca!
-  let finalId = null;
-  let attempts = 0;
-  
-  while (!finalId && attempts < 15) {
-    await new Promise(r => setTimeout(r, 1500));
-    const query = `{ allUploads(filter: { filename: { matches: { pattern: "${safeName}" } } }, orderBy: _createdAt_DESC, first: 1) { id } }`;
-    const gqlRes = await fetch('https://graphql.datocms.com/', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${readToken}`,
-        'Content-Type': 'application/json',
-        'X-Include-Drafts': 'true' // Ignora o cache
-      },
-      body: JSON.stringify({ query })
-    });
+  if (uploadFinalData.data && uploadFinalData.data.type === 'job') {
+    let isDone = false;
+    let attempts = 0;
     
-    const gqlJson = await gqlRes.json();
-    if (gqlJson.data && gqlJson.data.allUploads && gqlJson.data.allUploads.length > 0) {
-      finalId = gqlJson.data.allUploads[0].id;
+    while (!isDone && attempts < 15) {
+      await new Promise(r => setTimeout(r, 1000));
+      const jobRes = await fetch(`https://site-api.datocms.com/job-results/${finalId}`, {
+        headers: headersCMA,
+        redirect: 'follow'
+      });
+      
+      // Se a Cloudflare seguiu o redirect de sucesso (303) da API do DatoCMS, a URL muda para a da imagem final!
+      if (jobRes.url && jobRes.url.includes('/uploads/')) {
+        finalId = jobRes.url.split('/').pop();
+        isDone = true;
+        break;
+      }
+      
+      if (jobRes.status === 202) {
+        // Ainda processando... continua aguardando.
+      } else if (jobRes.status === 200) {
+        // Algumas versões da API retornam a imagem final com 200
+        const jobData = await jobRes.json();
+        if (jobData.data && jobData.data.type === 'upload') {
+          finalId = jobData.data.id;
+          isDone = true;
+        } else if (jobData.data && jobData.data.attributes && jobData.data.attributes.status === 'failed') {
+          throw new Error('O DatoCMS falhou ao processar a imagem internamente.');
+        }
+      } else {
+        // Falhou! O erro 404 real vem pra cá, mas NUNCA o falso 404 de redirect!
+        const errText = await jobRes.text();
+        throw new Error(`Erro do DatoCMS: HTTP ${jobRes.status} - ${errText}`);
+      }
+      attempts++;
     }
-    attempts++;
-  }
 
-  if (!finalId) {
-    throw new Error('A imagem foi enviada, mas demorou muito para processar no banco. Tente novamente.');
+    if (!isDone) {
+      throw new Error('A imagem foi enviada, mas demorou muito para processar no banco. Tente novamente.');
+    }
   }
 
   return finalId;
