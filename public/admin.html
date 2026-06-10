@@ -394,10 +394,10 @@
               <div class="beer-actions">
                 <span class="status-label ${statusClass}">${statusText}</span>
                 <label class="switch">
-                  <input type="checkbox" ${isPublished ? 'checked' : ''} onchange="toggleBeer('${beer.id}', this.checked)">
+                  <input type="checkbox" ${isPublished ? 'checked' : ''} onchange="toggleBeer('${beer.id}', this.checked, this)">
                   <span class="slider"></span>
                 </label>
-                <button class="btn btn-danger" style="width:auto; padding: 6px 12px; font-size: 0.9rem;" onclick="deleteBeer('${beer.id}', this)">Excluir</button>
+                <button class="btn btn-danger" style="width:auto; padding: 6px 12px; font-size: 0.9rem;" onclick="deleteBeer('${beer.id}', '${beer.imagem?.id}', this)">Excluir</button>
               </div>
             </div>
           `;
@@ -458,20 +458,21 @@
       } catch (err) { showToast(err.message, 'error'); setTimeout(refreshData, 2000); }
     }
 
-    async function deleteBeer(id, btn) {
+    async function deleteBeer(id, imageId, btn) {
       if(!confirm('CUIDADO: Tem certeza que deseja apagar essa cerveja do banco de dados definitivamente?')) return;
       btn.closest('.beer-item').style.display = 'none';
       try {
         const fd = new FormData();
         fd.append('action', 'delete_beer');
         fd.append('id', id);
+        if (imageId) fd.append('imageId', imageId);
         const res = await apiCall(fd);
         showToast(res.message, 'success');
         setTimeout(refreshData, 2000);
       } catch (err) { showToast(err.message, 'error'); setTimeout(refreshData, 2000); }
     }
 
-    async function toggleBeer(id, isPublished) {
+    async function toggleBeer(id, isPublished, checkbox) {
       try {
         const fd = new FormData();
         fd.append('action', 'toggle_beer');
@@ -479,10 +480,10 @@
         fd.append('publish', isPublished);
         await apiCall(fd);
         showToast('Estoque atualizado!', 'success');
-        setTimeout(refreshData, 2000);
+        // Mantemos visualmente e NÃO carregamos a página de novo, para ser 100% fluido!
       } catch (err) { 
         showToast(err.message, 'error'); 
-        setTimeout(refreshData, 2000);
+        if (checkbox) checkbox.checked = !isPublished; // Reverte se der erro
       }
     }
   </script>

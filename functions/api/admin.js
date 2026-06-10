@@ -183,7 +183,14 @@ export async function onRequestPost(context) {
       });
       if (!res.ok) throw new Error('Falha ao excluir a cerveja.');
       
-      // Optionally delete the attached image? No, let's keep media in media area to be safe.
+      // Delete the attached image to keep Media Area clean
+      if (data.imageId && data.imageId !== 'undefined') {
+        await fetch(`https://site-api.datocms.com/uploads/${data.imageId}`, {
+          method: 'DELETE',
+          headers: headersCMA
+        });
+      }
+      
       return new Response(JSON.stringify({ success: true, message: 'Cerveja excluída permanentemente.' }), { status: 200 });
     }
 
@@ -209,12 +216,16 @@ async function uploadToDatoCMS(file, token, tags, altText) {
     'X-Api-Version': '3'
   };
 
+  // Prevent URL encoding NOT_FOUND bugs in S3 by forcing safe alphanumeric filenames
+  const safeName = 'img_' + Date.now() + (file.name ? file.name.substring(file.name.lastIndexOf('.')) : '.png');
+  safeName.replace(/[^a-zA-Z0-9.]/g, '');
+
   // Step 1: Request S3 Upload URL
   const uploadRequestRes = await fetch('https://site-api.datocms.com/upload-requests', {
     method: 'POST',
     headers: headersCMA,
     body: JSON.stringify({
-      data: { type: 'upload_request', attributes: { filename: file.name } }
+      data: { type: 'upload_request', attributes: { filename: safeName } }
     })
   });
   if (!uploadRequestRes.ok) throw new Error('Falha ao solicitar URL de upload.');
@@ -286,27 +297,8 @@ async function uploadToDatoCMS(file, token, tags, altText) {
           throw new Error('Processamento falhou internamente no DatoCMS.');
         }
       } else if (jobRes.status !== 202) {
-        if (jobRes.status === 404) {
-          // FALLBACK: DatoCMS Job endpoint retornou 404, mas sabemos que a imagem processou (ocorre às vezes no CMA v3).
-          // Vamos aguardar 2 segundos e buscar a última imagem enviada via GraphQL!
-          await new Promise(r => setTimeout(r, 2000));
-          const query = `{ allUploads(orderBy: _createdAt_DESC, first: 1) { id } }`;
-          const fallbackRes = await fetch('https://graphql.datocms.com/', {
-            method: 'POST',
-            headers: { 'Authorization': 'Bearer d6ee5c482b25f0034b4119f94c7c18' },
-            body: JSON.stringify({ query })
-          });
-          const fallbackJson = await fallbackRes.json();
-          if (fallbackJson.data && fallbackJson.data.allUploads && fallbackJson.data.allUploads.length > 0) {
-            finalId = fallbackJson.data.allUploads[0].id;
-            isDone = true;
-          } else {
-            throw new Error('Processamento concluído, mas falha ao localizar o ID da imagem na galeria.');
-          }
-        } else {
-          const errText = await jobRes.text();
-          throw new Error(`Falha no processamento da imagem: HTTP ${jobRes.status} - ${errText}`);
-        }
+        const errText = await jobRes.text();
+        throw new Error(`Falha no processamento da imagem: HTTP ${jobRes.status} - ${errText}`);
       }
       attempts++;
     }
