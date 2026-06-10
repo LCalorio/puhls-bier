@@ -230,6 +230,11 @@ async function uploadToDatoCMS(file, token, tags, altText) {
   });
   if (!s3UploadRes.ok) throw new Error('Falha no upload para AWS S3.');
 
+  // Determine Primary Locale to safely set Alt Text
+  const siteRes = await fetch('https://site-api.datocms.com/site', { headers: headersCMA });
+  const siteData = await siteRes.json();
+  const primaryLocale = siteData.data.attributes.locales[0] || 'pt';
+
   // Step 3: Create Upload Record in DatoCMS
   const createUploadRes = await fetch('https://site-api.datocms.com/uploads', {
     method: 'POST',
@@ -239,7 +244,10 @@ async function uploadToDatoCMS(file, token, tags, altText) {
         type: 'upload',
         attributes: {
           path: s3Path,
-          tags: tags
+          tags: tags,
+          default_field_metadata: {
+            [primaryLocale]: { alt: altText || '', title: null, custom_data: {} }
+          }
         }
       }
     })
@@ -278,8 +286,27 @@ async function uploadToDatoCMS(file, token, tags, altText) {
           throw new Error('Processamento falhou internamente no DatoCMS.');
         }
       } else if (jobRes.status !== 202) {
-        const errText = await jobRes.text();
-        throw new Error(`Falha no processamento da imagem: HTTP ${jobRes.status} - ${errText}`);
+        if (jobRes.status === 404) {
+          // FALLBACK: DatoCMS Job endpoint retornou 404, mas sabemos que a imagem processou (ocorre às vezes no CMA v3).
+          // Vamos aguardar 2 segundos e buscar a última imagem enviada via GraphQL!
+          await new Promise(r => setTimeout(r, 2000));
+          const query = `{ allUploads(orderBy: _createdAt_DESC, first: 1) { id } }`;
+          const fallbackRes = await fetch('https://graphql.datocms.com/', {
+            method: 'POST',
+            headers: { 'Authorization': 'Bearer d6ee5c482b25f0034b4119f94c7c18' },
+            body: JSON.stringify({ query })
+          });
+          const fallbackJson = await fallbackRes.json();
+          if (fallbackJson.data && fallbackJson.data.allUploads && fallbackJson.data.allUploads.length > 0) {
+            finalId = fallbackJson.data.allUploads[0].id;
+            isDone = true;
+          } else {
+            throw new Error('Processamento concluído, mas falha ao localizar o ID da imagem na galeria.');
+          }
+        } else {
+          const errText = await jobRes.text();
+          throw new Error(`Falha no processamento da imagem: HTTP ${jobRes.status} - ${errText}`);
+        }
       }
       attempts++;
     }
