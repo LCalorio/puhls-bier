@@ -217,8 +217,8 @@ async function uploadToDatoCMS(file, token, tags, altText) {
   };
 
   // Prevent URL encoding NOT_FOUND bugs in S3 by forcing safe alphanumeric filenames
-  const safeName = 'img_' + Date.now() + (file.name ? file.name.substring(file.name.lastIndexOf('.')) : '.png');
-  safeName.replace(/[^a-zA-Z0-9.]/g, '');
+  const ext = file.name ? file.name.substring(file.name.lastIndexOf('.')) : '.png';
+  const safeName = 'img_' + Date.now() + ext.replace(/[^a-zA-Z0-9.]/g, '');
 
   // Step 1: Request S3 Upload URL
   const uploadRequestRes = await fetch('https://site-api.datocms.com/upload-requests', {
@@ -266,41 +266,36 @@ async function uploadToDatoCMS(file, token, tags, altText) {
   if (!createUploadRes.ok) throw new Error('Falha ao finalizar o upload no DatoCMS.');
   const uploadFinalData = await createUploadRes.json();
   
-  let finalId = uploadFinalData.data.id;
+  if (uploadFinalData.data && uploadFinalData.data.type === 'upload') {
+    return uploadFinalData.data.id;
+  }
   
-  if (uploadFinalData.data.type === 'job') {
-      let isDone = false;
-      let attempts = 0;
-      while (!isDone && attempts < 15) {
-        await new Promise(r => setTimeout(r, 1000));
-        const jobRes = await fetch(`https://site-api.datocms.com/job-results/${finalId}`, {
-          headers: headersCMA,
-          redirect: 'follow'
-        });
-        
-        // Se a requisição seguiu um redirect para a URL final do Upload (mesmo que dê 404 sem Auth), o ID está na URL!
-        if (jobRes.url && jobRes.url.includes('/uploads/')) {
-          finalId = jobRes.url.split('/').pop();
-          isDone = true;
-          break;
-        }
+  // O DatoCMS retornou um Job. Em vez de usar o /job-results (que está dando 404 falso),
+  // vamos consultar a API GraphQL com segurança até que a imagem apareça na biblioteca!
+  let finalId = null;
+  let attempts = 0;
+  
+  while (!finalId && attempts < 15) {
+    await new Promise(r => setTimeout(r, 1500));
+    const query = `{ allUploads(filter: { filename: { matches: { pattern: "${safeName}" } } }, orderBy: _createdAt_DESC, first: 1) { id } }`;
+    const gqlRes = await fetch('https://graphql.datocms.com/', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'X-Include-Drafts': 'true' // Ignora o cache
+      },
+      body: JSON.stringify({ query })
+    });
+    
+    const gqlJson = await gqlRes.json();
+    if (gqlJson.data && gqlJson.data.allUploads && gqlJson.data.allUploads.length > 0) {
+      finalId = gqlJson.data.allUploads[0].id;
+    }
+    attempts++;
+  }
 
-        if (jobRes.status === 202) {
-          // Processando... continua o loop
-        } else if (jobRes.status === 200) {
-          const jobData = await jobRes.json();
-          if (jobData.data && jobData.data.type === 'upload') {
-            finalId = jobData.data.id;
-            isDone = true;
-          } else if (jobData.data && jobData.data.attributes && jobData.data.attributes.status === 'failed') {
-            throw new Error('Processamento falhou internamente no DatoCMS.');
-          }
-        } else {
-          const errText = await jobRes.text();
-          throw new Error(`Falha no processamento da imagem: HTTP ${jobRes.status} - ${errText}`);
-        }
-        attempts++;
-      }
+  if (!finalId) {
+    throw new Error('A imagem foi enviada, mas demorou muito para processar no banco. Tente novamente.');
   }
 
   return finalId;
