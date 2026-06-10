@@ -273,14 +273,19 @@ async function uploadToDatoCMS(file, token, readToken, tags, altText) {
       await new Promise(r => setTimeout(r, 1000));
       const jobRes = await fetch(`https://site-api.datocms.com/job-results/${finalId}`, {
         headers: headersCMA,
-        redirect: 'follow'
+        redirect: 'manual'
       });
       
-      // Se a Cloudflare seguiu o redirect de sucesso (303) da API do DatoCMS, a URL muda para a da imagem final!
-      if (jobRes.url && jobRes.url.includes('/uploads/')) {
-        finalId = jobRes.url.split('/').pop();
-        isDone = true;
-        break;
+      // DatoCMS API returns 303 See Other when the job is done.
+      // We MUST intercept this manual redirect. If we let Cloudflare follow it automatically, 
+      // the GET /uploads/:id will often return 404 due to DatoCMS database replication lag!
+      if (jobRes.status === 303 || jobRes.status === 302 || jobRes.status === 301) {
+        const location = jobRes.headers.get('location');
+        if (location) {
+          finalId = location.split('/').pop();
+          isDone = true;
+          break;
+        }
       }
       
       if (jobRes.status === 202) {
@@ -295,7 +300,6 @@ async function uploadToDatoCMS(file, token, readToken, tags, altText) {
           throw new Error('O DatoCMS falhou ao processar a imagem internamente.');
         }
       } else {
-        // Falhou! O erro 404 real vem pra cá, mas NUNCA o falso 404 de redirect!
         const errText = await jobRes.text();
         throw new Error(`Erro do DatoCMS: HTTP ${jobRes.status} - ${errText}`);
       }
