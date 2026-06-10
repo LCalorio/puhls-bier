@@ -298,7 +298,10 @@
           <input type="text" id="editGalleryAlt" required>
         </div>
         <div style="display: flex; gap: 10px; margin-top: 20px;">
-          <button type="submit" class="btn" id="editGalleryBtn">Salvar Alterações</button>
+          <button type="submit" class="btn" id="editGalleryBtn">
+            <span id="editGalleryBtnText">Salvar Alterações</span>
+            <div class="loader" id="editGalleryLoader"></div>
+          </button>
           <button type="button" class="btn btn-secondary" onclick="closeModal('editGalleryModal')">Cancelar</button>
         </div>
       </form>
@@ -352,7 +355,10 @@
           <textarea id="editBeerDesc" rows="3" required></textarea>
         </div>
         <div style="display: flex; gap: 10px; margin-top: 20px;">
-          <button type="submit" class="btn" id="editBeerSubmitBtn">Salvar Alterações</button>
+          <button type="submit" class="btn" id="editBeerSubmitBtn">
+            <span id="editBeerSubmitBtnText">Salvar Alterações</span>
+            <div class="loader" id="editBeerSubmitLoader"></div>
+          </button>
           <button type="button" class="btn btn-secondary" onclick="closeModal('editBeerModal')">Cancelar</button>
         </div>
       </form>
@@ -395,9 +401,10 @@
       const btn = document.getElementById(btnId);
       const textSpan = document.getElementById(btnId + 'Text');
       const loader = document.getElementById(btnId.replace('Btn', 'Loader'));
-      btn.disabled = isLoading;
-      textSpan.textContent = isLoading ? 'Processando...' : defaultText;
-      loader.style.display = isLoading ? 'block' : 'none';
+      
+      if (btn) btn.disabled = isLoading;
+      if (textSpan) textSpan.textContent = isLoading ? 'Processando...' : defaultText;
+      if (loader) loader.style.display = isLoading ? 'block' : 'none';
     }
 
     // --- API HANDLER ---
@@ -672,4 +679,3 @@
 
 </body>
 </html>
-
