@@ -269,45 +269,39 @@ async function uploadToDatoCMS(file, token, readToken, tags, altText) {
     let isDone = false;
     let attempts = 0;
     
-    while (!isDone && attempts < 15) {
+    // O DatoCMS processa a imagem em um Job assíncrono.
+    // Para evitar os falsos 404 do endpoint de job-results e o cache lento do GraphQL,
+    // vamos buscar diretamente na API de Gerenciamento (CMA), que não tem cache!
+    let isDone = false;
+    let attempts = 0;
+    
+    while (!isDone && attempts < 20) {
       await new Promise(r => setTimeout(r, 1000));
-      const jobRes = await fetch(`https://site-api.datocms.com/job-results/${finalId}`, {
-        headers: headersCMA,
-        redirect: 'manual'
+      
+      const searchRes = await fetch(`https://site-api.datocms.com/uploads?filter[query]=${safeName}`, {
+        method: 'GET',
+        headers: headersCMA
       });
       
-      // DatoCMS API returns 303 See Other when the job is done.
-      // We MUST intercept this manual redirect. If we let Cloudflare follow it automatically, 
-      // the GET /uploads/:id will often return 404 due to DatoCMS database replication lag!
-      if (jobRes.status === 303 || jobRes.status === 302 || jobRes.status === 301) {
-        const location = jobRes.headers.get('location');
-        if (location) {
-          finalId = location.split('/').pop();
-          isDone = true;
-          break;
+      if (searchRes.ok) {
+        const searchJson = await searchRes.json();
+        // Se a imagem já foi processada e apareceu no banco:
+        if (searchJson.data && searchJson.data.length > 0) {
+          // Garante que é a imagem certa verificando o nome do arquivo
+          const foundImg = searchJson.data.find(img => img.attributes.filename === safeName || img.attributes.path.includes(safeName));
+          if (foundImg) {
+            finalId = foundImg.id;
+            isDone = true;
+            break;
+          }
         }
       }
       
-      if (jobRes.status === 202) {
-        // Ainda processando... continua aguardando.
-      } else if (jobRes.status === 200) {
-        // Algumas versões da API retornam a imagem final com 200
-        const jobData = await jobRes.json();
-        if (jobData.data && jobData.data.type === 'upload') {
-          finalId = jobData.data.id;
-          isDone = true;
-        } else if (jobData.data && jobData.data.attributes && jobData.data.attributes.status === 'failed') {
-          throw new Error('O DatoCMS falhou ao processar a imagem internamente.');
-        }
-      } else {
-        const errText = await jobRes.text();
-        throw new Error(`Erro do DatoCMS: HTTP ${jobRes.status} - ${errText}`);
-      }
       attempts++;
     }
 
     if (!isDone) {
-      throw new Error('A imagem foi enviada, mas demorou muito para processar no banco. Tente novamente.');
+      throw new Error('A imagem foi enviada, mas demorou mais que o esperado para processar no banco. Tente novamente.');
     }
   }
 
