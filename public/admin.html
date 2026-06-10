@@ -418,7 +418,7 @@
         showToast(res.message, 'success');
         document.getElementById('galleryForm').reset();
         document.getElementById('galleryPreview').style.display = 'none';
-        refreshData();
+        setTimeout(refreshData, 2000);
       } catch (err) { showToast(err.message, 'error'); } 
       finally { setBtnLoading('galleryBtn', false, 'Publicar na Galeria'); }
     });
@@ -440,7 +440,7 @@
         showToast(res.message, 'success');
         document.getElementById('beerForm').reset();
         document.getElementById('beerPreview').style.display = 'none';
-        refreshData();
+        setTimeout(refreshData, 2000);
       } catch (err) { showToast(err.message, 'error'); } 
       finally { setBtnLoading('beerBtn', false, 'Salvar e Publicar Cerveja'); }
     });
@@ -454,8 +454,8 @@
         fd.append('id', id);
         const res = await apiCall(fd);
         showToast(res.message, 'success');
-        refreshData();
-      } catch (err) { showToast(err.message, 'error'); refreshData(); }
+        setTimeout(refreshData, 2000);
+      } catch (err) { showToast(err.message, 'error'); setTimeout(refreshData, 2000); }
     }
 
     async function deleteBeer(id, btn) {
@@ -467,8 +467,8 @@
         fd.append('id', id);
         const res = await apiCall(fd);
         showToast(res.message, 'success');
-        refreshData();
-      } catch (err) { showToast(err.message, 'error'); refreshData(); }
+        setTimeout(refreshData, 2000);
+      } catch (err) { showToast(err.message, 'error'); setTimeout(refreshData, 2000); }
     }
 
     async function toggleBeer(id, isPublished) {
